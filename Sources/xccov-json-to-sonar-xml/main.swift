@@ -10,6 +10,9 @@ struct Converter: ParsableCommand {
     @Option(help: "Path to output file")
     var outputFile: String
 
+    @Option(help: "Pattern to match against file names and include only that will match")
+    var filenameFilter: String?
+
     mutating func run() throws {
         let task = Process()
         let pipe = Pipe()
@@ -29,9 +32,24 @@ struct Converter: ParsableCommand {
         print(" done")
         print("Decoding JSON...", terminator: "")
 
-        let json = try JSONDecoder().decode([String: [JsonLineCoverage]].self, from: data)
+        var json = try JSONDecoder().decode([String: [JsonLineCoverage]].self, from: data)
 
         print(" done")
+
+        if let filenameFilter = filenameFilter {
+            print("Filtering files...", terminator: "")
+            guard let regex = try? NSRegularExpression(pattern: filenameFilter) else {
+                throw Error.invalidFilterPattern
+            }
+            json = json.filter { (filename, _) in
+                regex.numberOfMatches(
+                    in: filename,
+                    range: NSRange(filename.startIndex..<filename.endIndex, in: filename)
+                ) > 0
+            }
+            print(" done")
+        }
+
         print("Converting...", terminator: "")
 
         let xml = XmlProjectCoverage(
@@ -73,6 +91,7 @@ struct Converter: ParsableCommand {
 
     enum Error: Swift.Error {
         case invalidInputFile
+        case invalidFilterPattern
     }
 
     struct JsonLineCoverage: Decodable {
