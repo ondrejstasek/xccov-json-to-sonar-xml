@@ -61,7 +61,9 @@ struct Converter: ParsableCommand {
                     } .map { line in
                         XmlLineCoverage(
                             lineNumber: line.line,
-                            covered: line.executionCount ?? 0 > 0
+                            covered: line.executed,
+                            branchesToCover: line.subranges?.count.advanced(by: 1),
+                            coveredBranches: line.subranges?.filter { $0.executionCount > 0 }.count.advanced(by: line.executed ? 1 : 0)
                         )
                     }
                 )
@@ -98,11 +100,24 @@ struct Converter: ParsableCommand {
         let line: Int
         let isExecutable: Bool
         let executionCount: Int?
+        let subranges: [Subrange]?
+
+        var executed: Bool {
+            executionCount ?? 0 > 0
+        }
+    }
+
+    struct Subrange: Decodable {
+        let column: Int
+        let executionCount: Int
+        let length: Int
     }
 
     struct XmlLineCoverage: Encodable, DynamicNodeEncoding {
         let lineNumber: Int
         let covered: Bool
+        let branchesToCover: Int?
+        let coveredBranches: Int?
 
         static func nodeEncoding(for key: CodingKey) -> XMLEncoder.NodeEncoding {
             .attribute

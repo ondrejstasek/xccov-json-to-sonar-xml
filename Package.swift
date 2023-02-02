@@ -1,4 +1,4 @@
-// swift-tools-version: 5.6
+// swift-tools-version: 5.7
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -16,7 +16,7 @@ let package = Package(
         .executableTarget(
             name: "xccov-json-to-sonar-xml",
             dependencies: [
-                "XMLCoder",
+                .product(name: "XMLCoder", package: "XMLCoder"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ]
         ),
