@@ -4,14 +4,20 @@ import ArgumentParser
 
 struct Converter: ParsableCommand {
 
-    @Option(help: "Path to .xcresult file")
+    @Option(name: .long, help: "Path to .xcresult file")
     var xcresultPath: String
 
-    @Option(help: "Path to output file")
+    @Option(name: .long, help: "Path to output file")
     var outputFile: String
 
-    @Option(help: "Pattern to match against file names and include only that will match")
+    @Option(name: .long, help: "Pattern to match against file names and include only that will match")
     var filenameFilter: String?
+
+    @Option(name: .long, help: "Prefix to strip from the begining of filepath to make it relative (must begin and end with '/')")
+    var relativePathPrefix: String?
+
+    @Flag(name: .short, help: "Whether to filter also files out of relative path prefix or not")
+    var filterFilesOutOfRelativePathPrefix = false
 
     mutating func run() throws {
         let task = Process()
@@ -36,7 +42,7 @@ struct Converter: ParsableCommand {
 
         print(" done")
 
-        if let filenameFilter = filenameFilter {
+        if let filenameFilter {
             print("Filtering files...", terminator: "")
             guard let regex = try? NSRegularExpression(pattern: filenameFilter) else {
                 throw Error.invalidFilterPattern
@@ -47,6 +53,25 @@ struct Converter: ParsableCommand {
                     range: NSRange(filename.startIndex..<filename.endIndex, in: filename)
                 ) > 0
             }
+            print(" done")
+        }
+
+        if let relativePathPrefix {
+            print("Stripping prefix...", terminator: "")
+            guard relativePathPrefix.prefix(1) == "/", relativePathPrefix.suffix(1) == "/" else {
+                throw Error.invalidRelativePathPrefix
+            }
+            json = Dictionary(
+                uniqueKeysWithValues: try json.compactMap { (filename, coverage) in
+                    guard filename.hasPrefix(relativePathPrefix) else {
+                        if filterFilesOutOfRelativePathPrefix {
+                            return nil
+                        }
+                        throw Error.fileOutOfRelativePathPrefix(filename)
+                    }
+                    return (String(filename.dropFirst(relativePathPrefix.count)), coverage)
+                }
+            )
             print(" done")
         }
 
@@ -94,6 +119,8 @@ struct Converter: ParsableCommand {
     enum Error: Swift.Error {
         case invalidInputFile
         case invalidFilterPattern
+        case invalidRelativePathPrefix
+        case fileOutOfRelativePathPrefix(String)
     }
 
     struct JsonLineCoverage: Decodable {
