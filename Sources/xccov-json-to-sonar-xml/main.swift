@@ -126,7 +126,7 @@ struct Converter: ParsableCommand {
     struct JsonLineCoverage: Decodable {
         let line: Int
         let isExecutable: Bool
-        let executionCount: Int?
+        let executionCount: Decimal?
         let subranges: [Subrange]?
 
         var executed: Bool {
@@ -136,7 +136,7 @@ struct Converter: ParsableCommand {
 
     struct Subrange: Decodable {
         let column: Int
-        let executionCount: Int
+        let executionCount: Decimal
         let length: Int
     }
 
